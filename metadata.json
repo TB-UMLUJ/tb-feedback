@@ -1,0 +1,5 @@
+{
+  "name": "tb-feedback",
+  "description": "A mobile-first survey platform for tracking hospital maintenance and operational faults with a one-question-per-screen interface.",
+  "requestFramePermissions": []
+}
