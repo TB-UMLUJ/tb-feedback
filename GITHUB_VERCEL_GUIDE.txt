@@ -40,7 +40,7 @@
      git branch -M main
      
      (السطر التالي انسخه من صفحة المستودع التي أنشأتها في GitHub)
-     git remote add origin https://github.com/USERNAME/amalj-maintenance.git
+     git remote add origin https://github.com/TB-UMLUJ/tb-feedback.git
      
      git push -u origin main
 

@@ -6,7 +6,7 @@ import {
   User, FileText, Image as ImageIcon, RefreshCw,
   LayoutDashboard, BarChart3, QrCode, Search, Filter, Printer,
   Download, AlertTriangle, Save, Clock, Trash2, Link, X,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon, Bell, BellOff
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart as RechartsPieChart, Pie, Legend
@@ -42,6 +42,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'board' | 'analytics' | 'qr'>('board');
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(Notification.permission);
   
   // QR Tab State
   const [qrUrl, setQrUrl] = useState(window.location.href);
@@ -60,11 +61,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   useEffect(() => {
     if (isAuthenticated) {
       loadData();
+      
+      // Update permission state
+      if ('Notification' in window) {
+        setNotificationPermission(Notification.permission);
+      }
+
       if (supabase) {
         const channel = supabase
           .channel('realtime_reports_erp')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'maintenance_requests' }, () => {
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'maintenance_requests' }, (payload) => {
+             // Reload data
              loadData();
+             
+             // Handle Notifications
+             if (payload.eventType === 'INSERT') {
+                sendBrowserNotification('بلاغ صيانة جديد 🚨', `رقم البلاغ: #${payload.new.report_id || 'جديد'}`);
+             } else if (payload.eventType === 'DELETE') {
+                sendBrowserNotification('تم حذف بلاغ 🗑️', 'تمت إزالة أحد البلاغات من النظام');
+             }
           })
           .subscribe();
         return () => { supabase.removeChannel(channel); };
@@ -81,11 +96,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode === '2030') setIsAuthenticated(true);
+    if (passcode === 'Aa1020304050!') setIsAuthenticated(true);
     else {
-        alert('الرمز غير صحيح');
+        alert('كلمة المرور غير صحيحة');
         setPasscode('');
     } 
+  };
+
+  // --- Notification Logic ---
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      alert('هذا المتصفح لا يدعم الإشعارات.');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === 'granted') {
+      new Notification('تم تفعيل الإشعارات بنجاح ✅', {
+        body: 'ستصلك تنبيهات عند إضافة أو حذف أي بلاغ.',
+      });
+    }
+  };
+
+  const sendBrowserNotification = (title: string, body: string) => {
+    if (Notification.permission === 'granted') {
+       // Play a subtle sound
+       const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+       audio.volume = 0.5;
+       audio.play().catch(() => {}); // Catch play errors (browsers might block auto-play)
+
+       // Show notification
+       new Notification(title, {
+         body: body,
+         icon: 'https://cdn-icons-png.flaticon.com/512/10309/10309221.png', // Bell Icon
+       });
+    }
   };
 
   // --- Actions ---
@@ -179,14 +224,14 @@ ${response.answers['image'] ? `📷 *رابط الصورة:* ${response.answers[
             <Lock className="w-10 h-10 text-cyan-400" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">لوحة التحكم</h2>
-          <p className="text-slate-400 mb-8">أدخل رمز المرور للوصول إلى لوحة الإدارة</p>
+          <p className="text-slate-400 mb-8">أدخل كلمة المرور للوصول إلى لوحة الإدارة</p>
           <form onSubmit={handleLogin} className="space-y-4">
             <input
               type="password"
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-700 text-white px-4 py-3 rounded-xl text-center text-2xl tracking-widest focus:ring-2 focus:ring-cyan-500 outline-none transition-all"
-              placeholder="••••"
+              className="w-full bg-slate-900/50 border border-slate-700 text-white px-4 py-3 rounded-xl text-center text-xl tracking-widest focus:ring-2 focus:ring-cyan-500 outline-none transition-all"
+              placeholder="كلمة المرور"
               autoFocus
             />
             <button
@@ -298,6 +343,19 @@ ${response.answers['image'] ? `📷 *رابط الصورة:* ${response.answers[
               لوحة التحكم
             </h1>
           </div>
+
+          {/* Notification Toggle Button */}
+          <button
+            onClick={requestNotificationPermission}
+            className={`p-2 rounded-lg transition-all border ${
+              notificationPermission === 'granted' 
+                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' 
+                : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-white'
+            }`}
+            title={notificationPermission === 'granted' ? 'الإشعارات مفعلة' : 'تفعيل الإشعارات'}
+          >
+            {notificationPermission === 'granted' ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+          </button>
         </div>
       </header>
 

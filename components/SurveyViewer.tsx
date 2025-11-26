@@ -1,6 +1,6 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Survey, Question, QuestionType, SurveyResponse } from '../types';
+import { surveyService } from '../services/surveyService';
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -14,7 +14,6 @@ import {
   FileText, 
   Camera,
   Stars,
-  Hash,
   Lock,
   RefreshCcw
 } from 'lucide-react';
@@ -34,14 +33,35 @@ export const SurveyViewer: React.FC<SurveyViewerProps> = ({ survey, onSubmit, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reportId, setReportId] = useState<string>('');
   
+  // Settings State for Logos
+  const [settings, setSettings] = useState({
+      welcomeLogo: "https://vjhayanayvozjzxhvllb.supabase.co/storage/v1/object/public/site-assets/welcome_logo_url.PNG",
+      thankYouLogo: "https://vjhayanayvozjzxhvllb.supabase.co/storage/v1/object/public/site-assets/welcome_logo_url.PNG",
+      welcomeTitle: "مرحبا بك !",
+      welcomeBody: "يمكنك البدء عندما تكون مستعداً"
+  });
+
   // Ref to help with scrolling
   const questionContainerRef = useRef<HTMLDivElement>(null);
 
-  // Default logo if not fetched from DB
-  const logoUrl = "https://cdn-icons-png.flaticon.com/512/3063/3063823.png"; 
-
   const primaryColor = survey.theme?.primaryColor || '#22d3ee';
   const fontFamily = 'El Messiri';
+
+  useEffect(() => {
+    // Fetch logos and settings from Supabase on mount
+    const loadSettings = async () => {
+        const data = await surveyService.fetchSiteSettings();
+        if (data) {
+            setSettings({
+                welcomeLogo: data.welcome_logo_url || data.logo_url || settings.welcomeLogo,
+                thankYouLogo: data.thank_you_logo_url || data.logo_url || settings.thankYouLogo,
+                welcomeTitle: data.welcome_title || settings.welcomeTitle,
+                welcomeBody: data.welcome_body || settings.welcomeBody
+            });
+        }
+    };
+    loadSettings();
+  }, []);
 
   const totalSteps = survey.questions.length;
   const progress = ((currentStep + 1) / totalSteps) * 100;
@@ -141,17 +161,23 @@ export const SurveyViewer: React.FC<SurveyViewerProps> = ({ survey, onSubmit, on
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[100px] animate-pulse-slow"></div>
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px] animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
 
-        <div className="z-10 glass-card p-8 md:p-12 rounded-[2rem] max-w-lg w-full relative group mt-10">
-            {/* Logo / Icon - Background Removed */}
-            <div className="absolute -top-16 left-1/2 -translate-x-1/2">
-                <span className="text-[6rem] drop-shadow-2xl animate-bounce-slow block filter hover:scale-110 transition-transform duration-300 cursor-default">👋</span>
+        <div className="z-10 glass-card p-8 md:p-12 rounded-[2rem] max-w-lg w-full relative group mt-16">
+            {/* Logo Section - Replaces Emoji */}
+            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 flex items-center justify-center">
+                 <div className="absolute inset-0 bg-cyan-500/30 blur-2xl rounded-full"></div>
+                 <img 
+                    src={settings.welcomeLogo} 
+                    alt="Welcome Logo" 
+                    className="w-full h-full object-contain filter drop-shadow-2xl animate-bounce-slow relative z-10"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                 />
             </div>
 
-            <h1 className="text-3xl md:text-5xl font-bold text-white mb-6 mt-12 leading-relaxed tracking-wide">
-              مرحبا بك !
+            <h1 className="text-3xl md:text-5xl font-bold text-white mb-6 mt-16 leading-relaxed tracking-wide">
+              {settings.welcomeTitle}
             </h1>
             <p className="text-slate-400 mb-10 text-lg md:text-xl font-light">
-              يمكنك البدء عندما تكون مستعداً
+              {settings.welcomeBody}
             </p>
             
             <button
@@ -179,56 +205,59 @@ export const SurveyViewer: React.FC<SurveyViewerProps> = ({ survey, onSubmit, on
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-green-500/5 to-cyan-500/5 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="glass-card p-10 rounded-[2.5rem] max-w-lg w-full relative overflow-hidden border-t border-white/10">
-            {/* Logo Section */}
-            <div className="mb-8 flex justify-center relative">
+        {/* Removed overflow-hidden to allow logo to pop out */}
+        <div className="glass-card p-10 rounded-[2.5rem] max-w-lg w-full relative border-t border-white/10 mt-16">
+            
+            {/* Logo Section - Absolute Positioning */}
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-32 h-32 flex items-center justify-center">
                  <div className="absolute inset-0 bg-cyan-500/20 blur-xl rounded-full"></div>
-                 <div className="w-28 h-28 glass rounded-full flex items-center justify-center p-5 relative ring-1 ring-white/10">
+                 <div className="w-full h-full glass rounded-full flex items-center justify-center p-4 relative ring-1 ring-white/10 shadow-2xl">
                     <img 
-                        src={logoUrl} 
-                        alt="Hospital Logo" 
+                        src={settings.thankYouLogo} 
+                        alt="Thank You Logo" 
                         className="w-full h-full object-contain filter drop-shadow-md"
                         onError={(e) => {
                             e.currentTarget.style.display = 'none';
-                            e.currentTarget.parentElement?.classList.add('hidden');
                         }}
                     />
-                    <CheckCircle2 className="w-12 h-12 text-green-400 hidden" />
                  </div>
             </div>
 
-            <h2 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400 mb-6">
-                شكراً لمشاركتكم!
-            </h2>
-            
-            <div className="text-slate-300/80 mb-8 text-base md:text-lg leading-relaxed font-light">
-                <p>ملاحظاتكم تمثّل ركيزة أساسية لتحسين بيئة المستشفى</p>
-                <p>ورفـع جـودة الـخدمات المـقدّمة للـمرضى والـمراجعين.</p>
-            </div>
-
-            <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-cyan-500/5 group-hover:bg-cyan-500/10 transition-colors"></div>
-                <div className="flex flex-row items-center justify-center gap-3 relative z-10 flex-wrap">
-                    <p className="text-slate-400 text-base md:text-lg flex items-center gap-2 whitespace-nowrap">
-                        <Hash className="w-4 h-4 md:w-5 md:h-5 text-cyan-400" /> رقم البلاغ:
-                    </p>
-                    <p className="text-2xl md:text-4xl font-mono font-bold text-white tracking-widest drop-shadow-lg whitespace-nowrap" dir="ltr">
-                      {reportId}#
-                    </p>
+            {/* Content Container - Pushed down to clear logo */}
+            <div className="mt-12">
+                <h2 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400 mb-6">
+                    شكراً لمشاركتكم!
+                </h2>
+                
+                <div className="text-slate-300/80 mb-8 text-base md:text-lg leading-relaxed font-light">
+                    <p>ملاحظاتكم تمثّل ركيزة أساسية لتحسين بيئة المستشفى</p>
+                    <p>ورفـع جـودة الـخدمات المـقدّمة للـمرضى والـمراجعين.</p>
                 </div>
-            </div>
 
-            <div className="mt-8 flex justify-center">
-                <div className="w-16 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50 rounded-full animate-pulse"></div>
+                <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-cyan-500/5 group-hover:bg-cyan-500/10 transition-colors"></div>
+                    <div className="flex flex-row items-center justify-center gap-3 relative z-10 flex-wrap">
+                        <p className="text-slate-400 text-base md:text-lg flex items-center gap-2 whitespace-nowrap">
+                            رقم البلاغ:
+                        </p>
+                        <p className="text-2xl md:text-4xl font-mono font-bold text-white tracking-widest drop-shadow-lg whitespace-nowrap" dir="ltr">
+                        #{reportId}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mt-8 flex justify-center">
+                    <div className="w-16 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50 rounded-full animate-pulse"></div>
+                </div>
+                
+                <button 
+                    onClick={handleRestart}
+                    className="mt-8 px-8 py-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all text-sm font-medium flex items-center justify-center gap-2 mx-auto border border-slate-700 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10 group"
+                >
+                    <RefreshCcw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" /> 
+                    تسجيل بلاغ جديد
+                </button>
             </div>
-            
-            <button 
-                onClick={handleRestart}
-                className="mt-8 px-8 py-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all text-sm font-medium flex items-center justify-center gap-2 mx-auto border border-slate-700 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10 group"
-            >
-                <RefreshCcw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" /> 
-                تسجيل بلاغ جديد
-            </button>
         </div>
       </div>
     );

@@ -36,6 +36,22 @@ export const surveyService = {
     return [MAIN_SURVEY];
   },
 
+  // NEW: Fetch Site Settings (Logos, Titles)
+  fetchSiteSettings: async () => {
+    if (!supabase) return null;
+    
+    const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .single();
+    
+    if (error) {
+        console.warn('Could not fetch settings:', error.message);
+        return null;
+    }
+    return data;
+  },
+
   fetchResponses: async (): Promise<SurveyResponse[]> => {
     if (!supabase) {
       console.warn('Supabase not configured. Returning mock data.');
